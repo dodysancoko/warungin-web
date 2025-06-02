@@ -6,6 +6,8 @@ import "./App.css";
 import Dashboard from "./page/dashboard";
 import ProductPage from "./page/product"; // Changed from ProdukScreen
 import ProductAddPage from "./page/productAdd"; // New import
+import CashierPage from "./page/CashierPage";
+import FinancePage from "./page/FinancePage";
 // import { Auth } from "./components/auth";
 
 function App() {
@@ -20,6 +22,8 @@ function App() {
           <Route path="/product" element={<ProductPage />} /> {/* Use ProductPage */}
           <Route path="/product/add" element={<ProductAddPage />} />
           <Route path="/product/edit/:productId" element={<ProductAddPage />} />
+          <Route path="/cashier" element={<CashierPage />} />
+          <Route path="/finance" element={<FinancePage />} /> 
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" reverseOrder={false} />
