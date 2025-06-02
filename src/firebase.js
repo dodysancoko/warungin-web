@@ -1,6 +1,11 @@
+// src/firebase.js
 import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 import { getAuth } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+// --- TAMBAHKAN IMPORT INI ---
+import { getFirestore, serverTimestamp } from "firebase/firestore";
+// --- AKHIR TAMBAH IMPORT ---
+
 
 const firebaseConfig = {
   apiKey: "AIzaSyDYaQDDtjFyppROt9VELTdV9WRmTv5Yg7k",
@@ -12,8 +17,16 @@ const firebaseConfig = {
   measurementId: "G-YVEW8HP4ED",
 };
 
+// Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const analytics = getAnalytics(app); //analytics tetap diinisialisasi jika Anda menggunakannya
 
-export { auth, db };
+// Get services
+// --- PERBAIKI TYPO DAN TAMBAHKAN INISIALISASI/EKSPOR DB ---
+export const auth = getAuth(app); // Perbaiki dari 'App' menjadi 'app'
+export const db = getFirestore(app); // Inisialisasi Firestore
+export { serverTimestamp }; // Ekspor serverTimestamp agar bisa digunakan di service
+// --- AKHIR PERBAIKAN/TAMBAHAN ---
+
+// Anda bisa tetap mengekspor analytics jika diperlukan di bagian lain aplikasi
+// export { analytics };
