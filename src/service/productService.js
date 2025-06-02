@@ -1,43 +1,56 @@
-import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
-import { firebaseApp } from "../firebase"; // pastikan sudah inisialisasi firebaseApp
+import {
+  collection,
+  getDocs,
+  addDoc,
+  updateDoc,
+  deleteDoc,
+  doc,
+  serverTimestamp,
+  getDoc
+} from "firebase/firestore";
+import { db } from "../firebase"; // Pastikan path ini benar
 
-const db = getFirestore(firebaseApp);
-const produkCollection = collection(db, "produk");
+// --- PERUBAHAN DI SINI ---
+const produkCollectionRef = collection(db, "produk"); // Menggunakan nama koleksi "produk"
 
-export const getAllProducts = async () => {
-  try {
-    const snapshot = await getDocs(produkCollection);
-    return snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-  } catch (e) {
-    throw new Error("Error fetching products: " + e.message);
-  }
-};
+export const productService = {
+  getAllProducts: async () => {
+    const data = await getDocs(produkCollectionRef); // Menggunakan ref yang sudah diperbarui
+    return data.docs.map((doc) => ({ ...doc.data(), id: doc.id }));
+  },
 
-export const addProduct = async (data) => {
-  try {
-    await addDoc(produkCollection, data);
-  } catch (e) {
-    throw new Error("Error adding product: " + e.message);
-  }
-};
+  getProductById: async (id) => {
+    // --- PERUBAHAN DI SINI ---
+    const productDoc = doc(db, "produk", id); // Menggunakan path "produk"
+    const docSnap = await getDoc(productDoc);
+    if (docSnap.exists()) {
+      return { ...docSnap.data(), id: docSnap.id };
+    } else {
+      // Bisa juga return null atau throw error sesuai kebutuhan
+      console.error("Produk tidak ditemukan dengan ID:", id);
+      throw new Error("Produk tidak ditemukan");
+    }
+  },
 
-export const updateProduct = async (id, data) => {
-  try {
-    const docRef = doc(db, "produk", id);
-    await updateDoc(docRef, data);
-  } catch (e) {
-    throw new Error("Error updating product: " + e.message);
-  }
-};
+  addProduct: async (newProduct) => {
+    return await addDoc(produkCollectionRef, { // Menggunakan ref yang sudah diperbarui
+      ...newProduct,
+      createdAt: serverTimestamp(), // Opsional: tambahkan timestamp
+    });
+  },
 
-export const deleteProduct = async (id) => {
-  try {
-    const docRef = doc(db, "produk", id);
-    await deleteDoc(docRef);
-  } catch (e) {
-    throw new Error("Error deleting product: " + e.message);
-  }
+  updateProduct: async (id, updatedProductData) => {
+    // --- PERUBAHAN DI SINI ---
+    const productDoc = doc(db, "produk", id); // Menggunakan path "produk"
+    return await updateDoc(productDoc, {
+        ...updatedProductData,
+        updatedAt: serverTimestamp(), // Opsional: tambahkan timestamp
+    });
+  },
+
+  deleteProduct: async (id) => {
+    // --- PERUBAHAN DI SINI ---
+    const productDoc = doc(db, "produk", id); // Menggunakan path "produk"
+    return await deleteDoc(productDoc);
+  },
 };
