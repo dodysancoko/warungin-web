@@ -1,28 +1,49 @@
+// src/page/product.jsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { productService } from "../service/productService";
+// useNavigate dan useLocation tidak lagi terlalu penting untuk navigasi form, tapi bisa tetap ada jika ada state refresh
+import { useNavigate, useLocation } from "react-router-dom"; 
+import { productService } from "../service/productService"; // Pastikan path ini benar
 import toast from "react-hot-toast";
-import { FiSearch, FiArchive, FiMoreVertical, FiPlus, FiEdit, FiTrash2 } from "react-icons/fi";
-import Sidebar from "../components/ui/sidebar";
+import { FiSearch, FiArchive, FiMoreVertical, FiPlus, FiEdit, FiTrash2, FiX } from "react-icons/fi"; // Tambah FiX untuk tombol close modal
+import Sidebar from "../components/ui/sidebar"; // Pastikan path ini benar
 
 const ProductPage = () => {
-  const navigate = useNavigate();
-  const location = useLocation();
+  const navigate = useNavigate(); // Masih bisa digunakan untuk refresh
+  const location = useLocation(); // Masih bisa digunakan untuk refresh
+
   const [produkList, setProdukList] = useState([]);
   const [filteredProdukList, setFilteredProdukList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true); // Untuk loading daftar produk
   const [activeOptionsMenu, setActiveOptionsMenu] = useState(null);
   const [showDeleteConfirmForProduct, setShowDeleteConfirmForProduct] = useState(null);
   const optionsMenuRef = useRef(null);
 
-  // ... (useEffect dan fungsi lainnya tetap sama) ...
+  // --- STATE UNTUK MODAL TAMBAH/EDIT PRODUK ---
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState("add"); // 'add' atau 'edit'
+  const [currentEditingProduct, setCurrentEditingProduct] = useState(null); // Untuk data produk yang diedit
+  const [formData, setFormData] = useState({
+    kode: "",
+    nama: "",
+    harga_beli: "",
+    harga_jual: "",
+    stok: "",
+    minimum_stok: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false); // Untuk loading saat submit form
+  const [formErrors, setFormErrors] = useState({});
+  // --- AKHIR STATE MODAL ---
+
+
   const fetchProducts = useCallback(async () => {
     setIsLoading(true);
     try {
       const products = await productService.getAllProducts();
+      // Urutkan produk di sini
+      products.sort((a,b) => a.nama?.localeCompare(b.nama || '') || 0);
       setProdukList(products);
-      setFilteredProdukList(products);
+      setFilteredProdukList(products); // Filtered list juga diupdate
     } catch (error) {
       toast.error("Gagal memuat produk: " + error.message);
       setProdukList([]);
@@ -35,12 +56,14 @@ const ProductPage = () => {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Untuk refresh jika ada state dari navigasi (misalnya setelah edit/tambah)
   useEffect(() => {
     if (location.state?.refresh) {
       fetchProducts();
-      navigate(location.pathname, { replace: true, state: {} });
+      navigate(location.pathname, { replace: true, state: {} }); // Hapus state refresh
     }
   }, [location.state, fetchProducts, navigate, location.pathname]);
+
 
   useEffect(() => {
     const lowercasedQuery = searchQuery.toLowerCase();
@@ -66,9 +89,107 @@ const ProductPage = () => {
     };
   }, [activeOptionsMenu]);
 
+  const resetFormData = () => {
+    setFormData({
+      kode: "",
+      nama: "",
+      harga_beli: "",
+      harga_jual: "",
+      stok: "",
+      minimum_stok: "",
+    });
+    setFormErrors({});
+  };
+
+  const openModal = (mode = "add", product = null) => {
+    setModalMode(mode);
+    setIsModalOpen(true);
+    resetFormData(); // Selalu reset form saat membuka modal
+    if (mode === "edit" && product) {
+      setCurrentEditingProduct(product);
+      setFormData({
+        kode: product.kode || "",
+        nama: product.nama || "",
+        harga_beli: product.harga_beli?.toString() || "",
+        harga_jual: product.harga_jual?.toString() || "",
+        stok: product.stok?.toString() || "",
+        minimum_stok: product.minimum_stok?.toString() || "",
+      });
+    } else {
+      setCurrentEditingProduct(null);
+    }
+  };
+
+  const closeModal = () => {
+    setIsModalOpen(false);
+    setCurrentEditingProduct(null);
+    resetFormData();
+  };
+
+  const handleFormChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (formErrors[name]) {
+        setFormErrors(prev => ({ ...prev, [name]: null }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.kode.trim()) newErrors.kode = "Kode produk tidak boleh kosong";
+    if (!formData.nama.trim()) newErrors.nama = "Nama produk tidak boleh kosong";
+    if (formData.harga_beli.trim() === "") newErrors.harga_beli = "Harga beli tidak boleh kosong";
+    else if (isNaN(Number(formData.harga_beli))) newErrors.harga_beli = "Harga beli harus berupa angka";
+    if (formData.harga_jual.trim() === "") newErrors.harga_jual = "Harga jual tidak boleh kosong";
+    else if (isNaN(Number(formData.harga_jual))) newErrors.harga_jual = "Harga jual harus berupa angka";
+    if (formData.stok.trim() === "") newErrors.stok = "Stok tidak boleh kosong";
+    else if (isNaN(Number(formData.stok))) newErrors.stok = "Stok harus berupa angka";
+    if (formData.minimum_stok.trim() === "") newErrors.minimum_stok = "Minimum stok tidak boleh kosong";
+    else if (isNaN(Number(formData.minimum_stok))) newErrors.minimum_stok = "Minimum stok harus berupa angka";
+    
+    setFormErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) {
+      toast.error("Silakan periksa kembali form Anda.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    const productData = {
+      kode: formData.kode,
+      nama: formData.nama,
+      harga_beli: parseInt(formData.harga_beli, 10),
+      harga_jual: parseInt(formData.harga_jual, 10),
+      stok: parseInt(formData.stok, 10),
+      minimum_stok: parseInt(formData.minimum_stok, 10),
+    };
+
+    try {
+      if (modalMode === "edit" && currentEditingProduct?.id) {
+        await productService.updateProduct(currentEditingProduct.id, productData);
+        toast.success("Produk berhasil diperbarui!");
+      } else {
+        await productService.addProduct(productData);
+        toast.success("Produk berhasil ditambahkan!");
+      }
+      fetchProducts(); // Refresh daftar produk
+      closeModal();     // Tutup modal
+    } catch (error) {
+      toast.error("Gagal menyimpan produk: " + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+
   const handleDeleteProduct = async (productId) => {
     if (!productId) return;
-    setIsLoading(true);
+    // isLoading untuk delete bisa dipisah atau gunakan isSubmitting jika prosesnya cepat
+    setIsSubmitting(true); // Atau state loading khusus delete
     try {
       await productService.deleteProduct(productId);
       toast.success("Produk berhasil dihapus!");
@@ -78,7 +199,7 @@ const ProductPage = () => {
     }
     setShowDeleteConfirmForProduct(null);
     setActiveOptionsMenu(null);
-    setIsLoading(false);
+    setIsSubmitting(false);
   };
 
   const toggleOptionsMenu = (productId, event) => {
@@ -86,8 +207,8 @@ const ProductPage = () => {
     setActiveOptionsMenu(activeOptionsMenu === productId ? null : productId);
   };
 
-  const handleEdit = (productId) => {
-    navigate(`/product/edit/${productId}`);
+  const handleEditAction = (product) => {
+    openModal("edit", product);
     setActiveOptionsMenu(null);
   };
 
@@ -139,9 +260,7 @@ const ProductPage = () => {
                 Belum Ada Produk
               </p>
               <p className="mt-2 text-sm font-poppins text-gray-500">
-                Pilih 'Tambah Produk' untuk menambahkan
-                <br />
-                produk kamu ke dalam inventori.
+                Pilih 'Tambah Produk' untuk menambahkan produk baru.
               </p>
             </div>
           ) : !filteredProdukList.length && searchQuery ? (
@@ -171,7 +290,6 @@ const ProductPage = () => {
                   <div className="relative"> 
                     <button
                       onClick={(e) => toggleOptionsMenu(produk.id, e)}
-                      // --- PERUBAHAN DI SINI untuk tombol titik tiga ---
                       className="p-1.5 bg-white text-slate-700 hover:bg-gray-100 rounded-md shadow focus:outline-none border border-gray-300" 
                       aria-haspopup="true"
                       aria-expanded={activeOptionsMenu === produk.id}
@@ -182,18 +300,14 @@ const ProductPage = () => {
                     {activeOptionsMenu === produk.id && (
                       <div
                         ref={optionsMenuRef}
-                        // --- PERUBAHAN DI SINI untuk menu popup ---
-                        // bg-white sudah ada, pastikan tidak ada class lain yang membuatnya transparan
-                        // shadow-xl dan ring memberikan efek visual yang baik
                         className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-xl z-20 py-1 ring-1 ring-black ring-opacity-5 focus:outline-none"
                         role="menu"
                         aria-orientation="vertical"
                         aria-labelledby="options-menu"
                       >
                         <button
-                          onClick={() => handleEdit(produk.id)}
-                          // Warna teks item menu dan ikon tetap, background item hover:bg-gray-100
-                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-t-md" // rounded-t-md jika ini item pertama
+                          onClick={() => handleEditAction(produk)} // Diubah ke handleEditAction
+                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-t-md"
                           role="menuitem"
                         >
                           <FiEdit className="mr-3 h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -201,7 +315,7 @@ const ProductPage = () => {
                         </button>
                         <button
                           onClick={() => openDeleteConfirmModal(produk)}
-                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-b-md" // rounded-b-md jika ini item terakhir
+                          className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-b-md"
                           role="menuitem"
                         >
                           <FiTrash2 className="mr-3 h-5 w-5 text-gray-400" aria-hidden="true" />
@@ -216,6 +330,79 @@ const ProductPage = () => {
           )}
         </div>
         
+        {/* MODAL UNTUK TAMBAH/EDIT PRODUK */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-transparant bg-opacity-60 flex items-center justify-center z-40 p-4 overflow-y-auto">
+            <div className="bg-white rounded-lg shadow-xl w-full max-w-lg max-h-[90vh] flex flex-col"> {/* Max height dan flex-col */}
+                {/* Header Modal */}
+                <div className="flex justify-between items-center p-5 border-b border-gray-200 sticky top-0 bg-white z-10">
+                    <h3 className="text-lg font-poppins font-semibold text-gray-800">
+                    {modalMode === 'edit' ? 'Edit Produk' : 'Tambah Produk'}
+                    </h3>
+                    <button onClick={closeModal} className="text-gray-400 hover:text-gray-600">
+                        <FiX size={24} />
+                    </button>
+                </div>
+
+                {/* Form Modal (Scrollable) */}
+                <form onSubmit={handleFormSubmit} className="p-5 space-y-5 overflow-y-auto flex-grow"> {/* flex-grow dan overflow-y-auto */}
+                    <div>
+                        <label htmlFor="modal-kode" className="block text-sm font-poppins font-medium text-gray-600">Kode Produk</label>
+                        <input type="text" name="kode" id="modal-kode" value={formData.kode} onChange={handleFormChange} placeholder="Masukkan kode produk"
+                        className={`mt-1 block w-full px-3 py-2 border ${formErrors.kode ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm text-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm font-poppins`} />
+                        {formErrors.kode && <p className="text-red-500 text-xs mt-1">{formErrors.kode}</p>}
+                    </div>
+                    <div>
+                        <label htmlFor="modal-nama" className="block text-sm font-poppins font-medium text-gray-600">Nama Produk</label>
+                        <input type="text" name="nama" id="modal-nama" value={formData.nama} onChange={handleFormChange} placeholder="Masukkan nama produk"
+                        className={`mt-1 block w-full px-3 py-2 border ${formErrors.nama ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm text-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm font-poppins`} />
+                        {formErrors.nama && <p className="text-red-500 text-xs mt-1">{formErrors.nama}</p>}
+                    </div>
+                    
+                    <div className="pt-2"><h2 className="text-md font-poppins font-semibold text-gray-800">Harga</h2></div>
+                    <div>
+                        <label htmlFor="modal-harga_beli" className="block text-sm font-poppins font-medium text-gray-600">Harga Beli</label>
+                        <input type="number" name="harga_beli" id="modal-harga_beli" value={formData.harga_beli} onChange={handleFormChange} placeholder="Masukkan harga beli"
+                        className={`mt-1 block w-full px-3 py-2 border ${formErrors.harga_beli ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm text-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm font-poppins`} />
+                        {formErrors.harga_beli && <p className="text-red-500 text-xs mt-1">{formErrors.harga_beli}</p>}
+                    </div>
+                    <div>
+                        <label htmlFor="modal-harga_jual" className="block text-sm font-poppins font-medium text-gray-600">Harga Jual</label>
+                        <input type="number" name="harga_jual" id="modal-harga_jual" value={formData.harga_jual} onChange={handleFormChange} placeholder="Masukkan harga jual"
+                        className={`mt-1 block w-full px-3 py-2 border ${formErrors.harga_jual ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm text-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm font-poppins`} />
+                        {formErrors.harga_jual && <p className="text-red-500 text-xs mt-1">{formErrors.harga_jual}</p>}
+                    </div>
+
+                    <div className="pt-2"><h2 className="text-md font-poppins font-semibold text-gray-800">Kuantitas</h2></div>
+                    <div>
+                        <label htmlFor="modal-stok" className="block text-sm font-poppins font-medium text-gray-600">Stok</label>
+                        <input type="number" name="stok" id="modal-stok" value={formData.stok} onChange={handleFormChange} placeholder="Masukkan stok"
+                        className={`mt-1 block w-full px-3 py-2 border ${formErrors.stok ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm text-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm font-poppins`} />
+                        {formErrors.stok && <p className="text-red-500 text-xs mt-1">{formErrors.stok}</p>}
+                    </div>
+                    <div>
+                        <label htmlFor="modal-minimum_stok" className="block text-sm font-poppins font-medium text-gray-600">Minimum Stok</label>
+                        <input type="number" name="minimum_stok" id="modal-minimum_stok" value={formData.minimum_stok} onChange={handleFormChange} placeholder="Masukkan minimum stok"
+                        className={`mt-1 block w-full px-3 py-2 border ${formErrors.minimum_stok ? 'border-red-500' : 'border-gray-300'} rounded-md shadow-sm text-black focus:outline-none focus:ring-sky-500 focus:border-sky-500 sm:text-sm font-poppins`} />
+                        {formErrors.minimum_stok && <p className="text-red-500 text-xs mt-1">{formErrors.minimum_stok}</p>}
+                    </div>
+                </form>
+                {/* Footer Modal */}
+                <div className="flex justify-end items-center p-5 border-t border-gray-200 sticky bottom-0 bg-white z-10">
+                    <button type="button" onClick={closeModal}
+                            className="px-4 py-2 text-sm font-poppins font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md mr-3">
+                        Batal
+                    </button>
+                    <button type="button" onClick={handleFormSubmit} disabled={isSubmitting} // type="button" agar tidak submit form secara otomatis, submit dikontrol onClick
+                            className="bg-sky-500 hover:bg-sky-600 text-white font-poppins font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50 disabled:opacity-50">
+                        {isSubmitting ? "Menyimpan..." : "Simpan"}
+                    </button>
+                </div>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL KONFIRMASI HAPUS */}
         {showDeleteConfirmForProduct && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-6 shadow-xl max-w-sm w-full">
@@ -223,7 +410,7 @@ const ProductPage = () => {
                 Hapus produk
               </h3>
               <p className="text-sm font-poppins text-gray-600 mt-2">
-                Semua data terkait dengan produk juga akan dihapus. Tindakan ini tidak bisa dibatalkan.
+                Yakin ingin menghapus produk "{showDeleteConfirmForProduct.nama}"? Tindakan ini tidak bisa dibatalkan.
               </p>
               <div className="mt-6 flex justify-end space-x-3">
                 <button
@@ -235,9 +422,9 @@ const ProductPage = () => {
                 <button
                   onClick={() => handleDeleteProduct(showDeleteConfirmForProduct.id)}
                   className="px-4 py-2 text-sm font-poppins font-medium text-white bg-red-500 hover:bg-red-600 rounded-md"
-                  disabled={isLoading}
+                  disabled={isSubmitting} // Ganti isLoading menjadi isSubmitting atau state loading delete khusus
                 >
-                  {isLoading ? "Menghapus..." : "Hapus"}
+                  {isSubmitting ? "Menghapus..." : "Hapus"}
                 </button>
               </div>
             </div>
@@ -245,7 +432,7 @@ const ProductPage = () => {
         )}
 
         <button
-          onClick={() => navigate("/product/add")}
+          onClick={() => openModal("add")} // Buka modal untuk tambah produk
           className="fixed bottom-6 right-6 bg-sky-500 hover:bg-sky-600 text-white p-4 rounded-full shadow-lg z-30"
           aria-label="Tambah Produk"
         >
