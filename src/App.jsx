@@ -9,6 +9,8 @@ import ProductPage from "./page/product";
 // import ProductAddPage from "./page/productAdd"; // HAPUS IMPORT INI
 import CashierPage from "./page/CashierPage";
 import FinancePage from "./page/FinancePage";
+import LaporanPage from "./page/LaporanPage";
+// import { Auth } from "./components/auth";
 
 function App() {
   return (
@@ -24,7 +26,8 @@ function App() {
           {/* <Route path="/product/add" element={<ProductAddPage />} /> */}
           {/* <Route path="/product/edit/:productId" element={<ProductAddPage />} /> */}
           <Route path="/cashier" element={<CashierPage />} />
-          <Route path="/finance" element={<FinancePage />} /> 
+          <Route path="/finance" element={<FinancePage />} />
+          <Route path="/report" element={<LaporanPage />} /> 
         </Routes>
       </BrowserRouter>
       <Toaster position="top-center" reverseOrder={false} />
