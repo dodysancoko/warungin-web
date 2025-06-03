@@ -1,23 +1,16 @@
-// src/page/CashierPage.jsx
 import { useEffect, useState, useMemo } from "react";
-// Import auth, db, serverTimestamp
-import { auth, db, serverTimestamp } from "../firebase"; // SESUAIKAN PATH INI
+import { auth, db, serverTimestamp } from "../firebase"; 
 import { onAuthStateChanged } from "firebase/auth";
 import {
   collection,
   doc,
   getDocs,
-  runTransaction, // Import runTransaction
-  // serverTimestamp, // Sudah diimpor dari firebase.js
+  runTransaction, 
 } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import Sidebar from "../components/ui/sidebar"; // Pastikan path ini benar
+import Sidebar from "../components/ui/sidebar"; 
 import toast from "react-hot-toast";
-import { Search, CheckCircle, ArrowLeft, Minus, Plus } from "lucide-react"; // Atau dari react-icons/fi
-
-// Import service dan types jika diperlukan di sini
-// import { TransactionService } from '../service/transactionService'; // Tidak perlu panggil service dari page Cashier
-// import { TransactionType } from '../types/transactionTypes'; // Jika perlu merujuk tipenya
+import { Search, CheckCircle, ArrowLeft, Minus, Plus } from "lucide-react"; 
 
 const RightPanelView = {
   CART: "CART",
@@ -39,7 +32,6 @@ const CashierPage = () => {
   const [lastTransactionDetails, setLastTransactionDetails] = useState(null);
   const [paymentInputError, setPaymentInputError] = useState(false);
 
-  // Cek status otentikasi
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (user) setCurrentUser(user);
@@ -51,7 +43,6 @@ const CashierPage = () => {
     return () => unsubscribe();
   }, [navigate]);
 
-  // Fetch produk setelah user terautentikasi
   useEffect(() => {
     if (currentUser) fetchProducts();
   }, [currentUser]);
@@ -66,7 +57,6 @@ const CashierPage = () => {
           return {
              id: doc.id,
              ...data,
-             // PASTIKAN DATA NUMERIK DARI FIRESTORE DIUBAH KE NUMBER
              harga_beli: Number(data.harga_beli || 0),
              harga_jual: Number(data.harga_jual || 0),
              stok: Number(data.stok || 0),
@@ -85,7 +75,6 @@ const CashierPage = () => {
   const handleAddToCart = (product) => {
     setCart((prevCart) => {
       const existingItem = prevCart.find((item) => item.id === product.id);
-      // Pastikan stok yang dicek adalah Number
       const productStock = Number(product.stok || 0);
 
       if (productStock <= 0 && !existingItem) {
@@ -103,7 +92,6 @@ const CashierPage = () => {
           return prevCart;
         }
       }
-      // Tambahkan item baru dengan jumlah: 1
       return [...prevCart, { ...product, jumlah: 1 }];
     });
   };
@@ -117,7 +105,6 @@ const CashierPage = () => {
       const originalProduct = products.find(p => p.id === productId);
       if (!originalProduct) return prevCart;
 
-      // Pastikan kuantitas dan stok adalah Number sebelum operasi
       const currentQuantity = Number(currentItem.jumlah || 0);
       const originalStock = Number(originalProduct.stok || 0);
 
@@ -139,7 +126,6 @@ const CashierPage = () => {
   };
 
   const calculateTotal = useMemo(() => {
-    // Pastikan harga_jual dan jumlah di item cart adalah Number saat menghitung total
     return cart.reduce((sum, item) => sum + (Number(item.harga_jual || 0) * Number(item.jumlah || 0)), 0);
   }, [cart]);
 
@@ -149,15 +135,13 @@ const CashierPage = () => {
       return;
     }
     setPaymentInputError(false);
-    // Reset uang diterima saat masuk pembayaran
     setUangDiterima("");
     setRightPanelView(RightPanelView.PAYMENT);
   };
 
   const handlePaymentSubmit = async () => {
-    // Pastikan uang diterima adalah Number
     const numUangDiterima = Number(uangDiterima.replace(/\./g, "") || 0);
-    const totalTagihan = calculateTotal; // calculateTotal sudah dihitung sebagai Number
+    const totalTagihan = calculateTotal; 
 
     if (numUangDiterima < totalTagihan) {
       toast.error("Uang yang diterima kurang dari total tagihan.");
@@ -174,41 +158,36 @@ const CashierPage = () => {
     setProcessingCheckout(true);
 
     try {
-      // Gunakan runTransaction untuk operasi atomik (update stok & tambah transaksi)
       const newTransactionDetails = await runTransaction(db, async (transaction) => {
         const productRefPromises = cart.map(item => transaction.get(doc(db, "produk", item.id)));
         const productDocsSnapshots = await Promise.all(productRefPromises);
-        const metadataRef = doc(db, "metadata", "penjualan"); // Ref untuk kode transaksi otomatis
+        const metadataRef = doc(db, "metadata", "penjualan"); 
         const metadataDocSnapshot = await transaction.get(metadataRef);
 
         const produkToUpdateWriteData = [];
         let calculatedTotalHarga = 0;
         let calculatedTotalProfit = 0;
-        const transactionItems = []; // Array untuk detail item transaksi
-        const fetchedProductDataMap = new Map(); // Untuk menyimpan data produk asli dari Firestore
+        const transactionItems = []; 
+        const fetchedProductDataMap = new Map(); 
 
         for (let i = 0; i < cart.length; i++) {
           const item = cart[i];
           const productDocSnapshot = productDocsSnapshots[i];
 
           if (!productDocSnapshot.exists()) {
-              // Rollback transaction jika produk tidak ditemukan
               throw new Error(`Produk "${item.nama || item.id}" tidak ditemukan.`);
           }
 
           const productData = productDocSnapshot.data();
-          fetchedProductDataMap.set(item.id, productData); // Simpan data asli
+          fetchedProductDataMap.set(item.id, productData); 
 
-          // PASTIKAN STOK DARI FIRESTORE DAN JUMLAH DARI KERANJANG ADALAH NUMBER
           const currentStockInFirestore = Number(productData.stok || 0);
           const quantityInCart = Number(item.jumlah || 0);
 
           if (currentStockInFirestore < quantityInCart) {
-             // Rollback transaction jika stok tidak cukup
              throw new Error(`Stok produk "${item.nama || item.id}" tidak cukup. Tersedia: ${currentStockInFirestore}`);
           }
 
-          // PASTIKAN HARGA ADALAH NUMBER SAAT DIHITUNG DAN DISIMPAN DI ITEM TRANSAKSI
           const itemHargaJual = Number(item.harga_jual || 0);
           const productHargaBeli = Number(productData.harga_beli || 0);
 
@@ -216,64 +195,56 @@ const CashierPage = () => {
           const profitPerItem = (itemHargaJual - productHargaBeli) * quantityInCart;
           calculatedTotalProfit += profitPerItem;
 
-          // Simpan detail item dengan nilai numerik sebagai NUMBER
           transactionItems.push({
             productId: item.id,
             nama: item.nama,
-            harga_jual: itemHargaJual, // Sudah Number
-            harga_beli: productHargaBeli, // Sudah Number
-            jumlah: quantityInCart, // Sudah Number
+            harga_jual: itemHargaJual, 
+            harga_beli: productHargaBeli, 
+            jumlah: quantityInCart, 
           });
         }
 
-        // Generate kode transaksi unik
         let nextKode = (metadataDocSnapshot.exists() && metadataDocSnapshot.data().lastKode) ? Number(metadataDocSnapshot.data().lastKode) + 1 : 1;
-        const formattedKode = `${nextKode.toString().padStart(5, "0")}`; // Format 00001, 00002, ...
+        const formattedKode = `${nextKode.toString().padStart(5, "0")}`; 
 
-        // Update stok produk di Firestore
         cart.forEach(item => {
           const productRef = doc(db, "produk", item.id);
           const originalProductData = fetchedProductDataMap.get(item.id);
           const currentStockInFirestore = Number(originalProductData.stok || 0);
           const quantityInCart = Number(item.jumlah || 0);
-          const newStok = currentStockInFirestore - quantityInCart; // Hasil operasi Number
-          transaction.update(productRef, { stok: newStok }); // Update stok sebagai Number di Firestore
-          produkToUpdateWriteData.push({ id: item.id, newStok }); // Untuk update state UI
+          const newStok = currentStockInFirestore - quantityInCart; 
+          transaction.update(productRef, { stok: newStok }); 
+          produkToUpdateWriteData.push({ id: item.id, newStok }); 
         });
 
-        // Buat dokumen transaksi baru
         const newTransactionDocRef = doc(collection(db, "transaksi"));
         const finalTransactionData = {
           kode: formattedKode,
-          tanggal: serverTimestamp(), // Gunakan timestamp server
-          totalHarga: calculatedTotalHarga, // Sudah Number
-          profit: calculatedTotalProfit, // Sudah Number
-          items: transactionItems, // Array item dengan nilai numerik sebagai Number
-          userId: currentUser.uid, // ID user kasir
-          uangDiterima: numUangDiterima, // Sudah Number
-          kembalian: numUangDiterima - calculatedTotalHarga, // Hasil operasi Number
+          tanggal: serverTimestamp(), 
+          totalHarga: calculatedTotalHarga, 
+          profit: calculatedTotalProfit, 
+          items: transactionItems, 
+          userId: currentUser.uid, 
+          uangDiterima: numUangDiterima, 
+          kembalian: numUangDiterima - calculatedTotalHarga, 
         };
-        transaction.set(newTransactionDocRef, finalTransactionData); // Simpan transaksi
+        transaction.set(newTransactionDocRef, finalTransactionData); 
 
-        // Update metadata untuk kode transaksi berikutnya
         transaction.set(metadataRef, { lastKode: nextKode }, { merge: true });
 
-        // Kembalikan detail transaksi yang berhasil disimpan + data produk yang diupdate
         return {
             ...finalTransactionData,
             id: newTransactionDocRef.id,
             updatedProducts: produkToUpdateWriteData,
-            tanggalClient: new Date() // Tambahkan tanggal sisi client untuk tampilan segera
+            tanggalClient: new Date() 
         };
       });
 
-      // Jika transaksi berhasil di Firestore
       toast.success(`Transaksi ${newTransactionDetails.kode} berhasil!`);
-      setLastTransactionDetails(newTransactionDetails); // Simpan detail untuk tampilan sukses
-      setCart([]); // Kosongkan keranjang
-      setUangDiterima(""); // Reset uang diterima
+      setLastTransactionDetails(newTransactionDetails); 
+      setCart([]); 
+      setUangDiterima(""); 
 
-      // Update state produk di UI berdasarkan produk yang diupdate di transaksi
       setProducts((prevProducts) =>
         prevProducts.map((p) => {
           const updatedDetail = newTransactionDetails.updatedProducts.find(
@@ -283,16 +254,14 @@ const CashierPage = () => {
         })
       );
 
-      setRightPanelView(RightPanelView.SUCCESS); // Tampilkan view sukses
+      setRightPanelView(RightPanelView.SUCCESS); 
 
     } catch (error) {
-      // Jika transaksi gagal (misal: stok tidak cukup)
       console.error("Payment error:", error);
-      // Pesan error dari throw new Error di dalam runTransaction akan muncul di sini
       toast.error(`Gagal checkout: ${error.message}`);
 
     } finally {
-      setProcessingCheckout(false); // Nonaktifkan loading
+      setProcessingCheckout(false); 
     }
   };
 
@@ -301,10 +270,9 @@ const CashierPage = () => {
 
 
   const handleUangDiterimaChange = (e) => {
-    const value = e.target.value.replace(/\D/g, ""); // Hapus semua non-digit
-    // Simpan nilai numerik mentah (Number), format hanya untuk tampilan di input
+    const value = e.target.value.replace(/\D/g, ""); 
     setUangDiterima(value === "" ? "" : Number(value).toLocaleString("id-ID").replace(/,/g, "."));
-    if (paymentInputError) setPaymentInputError(false); // Reset error jika user mulai mengetik
+    if (paymentInputError) setPaymentInputError(false); 
   };
 
 
@@ -313,22 +281,19 @@ const CashierPage = () => {
        return products.filter((product) =>
          product.nama.toLowerCase().includes(lowercasedQuery)
        );
-  }, [searchTerm, products]); // Hitung ulang jika searchTerm atau products berubah
+  }, [searchTerm, products]); 
 
 
   const quickPayOptions = useMemo(() => {
     const baseTotal = calculateTotal;
     const options = [
         baseTotal,
-        // Opsi pembulatan ke atas ke ribuan, lima ribuan, puluhan ribu, dll.
         Math.ceil((baseTotal + 1) / 1000) * 1000,
         Math.ceil((baseTotal + 1) / 5000) * 5000,
         Math.ceil((baseTotal + 1) / 10000) * 10000,
-        // Opsi nominal tetap
         10000, 20000, 50000, 100000, 200000, 500000
-    ].filter(opt => opt >= baseTotal); // Filter opsi yang kurang dari total
-    // Ambil opsi unik, urutkan, dan batasi jumlahnya
-    return [...new Set(options)].sort((a,b) => a-b).slice(0,6); // Batasi sampai 6 opsi
+    ].filter(opt => opt >= baseTotal); 
+    return [...new Set(options)].sort((a,b) => a-b).slice(0,6); 
   }, [calculateTotal]);
 
   if (!currentUser) {
@@ -339,20 +304,17 @@ const CashierPage = () => {
     );
   }
 
-  // Tampilan Keranjang
   const renderCartView = () => (
     <>
       <h2 className="text-xl font-bold mb-4 text-gray-800">Keranjang</h2>
       {cart.length === 0 ? (
         <p className="text-gray-500 flex-grow flex items-center justify-center">Keranjang kosong.</p>
       ) : (
-        // Pastikan overflow-y-auto ada di sini
-        <div className="flex-grow overflow-y-auto mb-4 pr-2 -mr-2"> {/* pr-2 dan -mr-2 untuk scrollbar */}
+        <div className="flex-grow overflow-y-auto mb-4 pr-2 -mr-2"> 
           {cart.map((item) => (
             <div key={item.id} className="flex justify-between items-center mb-3 pb-3 border-b">
               <div>
                 <h4 className="font-medium text-gray-800">{item.nama}</h4>
-                {/* Tampilkan harga jual dan jumlah */}
                 <p className="text-xs text-gray-500">
                     {formatCurrency(item.harga_jual || 0)} x {item.jumlah || 0}
                 </p>
@@ -371,7 +333,6 @@ const CashierPage = () => {
                 >
                     <Plus size={18}/>
                 </button>
-                {/* Tampilkan subtotal per item */}
                 <span className="font-semibold w-20 text-right text-gray-800 ml-2">
                     {formatCurrency(Number(item.harga_jual || 0) * Number(item.jumlah || 0))}
                 </span>
@@ -383,7 +344,7 @@ const CashierPage = () => {
       <div className="mt-auto border-t pt-4">
         <div className="flex justify-between font-bold text-lg mb-4 text-gray-800">
           <span>Total:</span>
-          <span>{formatCurrency(calculateTotal)}</span> {/* calculateTotal sudah Number */}
+          <span>{formatCurrency(calculateTotal)}</span> 
         </div>
         <button onClick={handleProceedToPayment} disabled={cart.length === 0 || processingCheckout}
           className="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded-md font-semibold transition-colors disabled:bg-gray-400 disabled:text-gray-600">
@@ -393,7 +354,6 @@ const CashierPage = () => {
     </>
   );
 
-  // Tampilan Pembayaran
   const renderPaymentView = () => (
     <>
       <div className="flex items-center mb-6">
@@ -411,11 +371,10 @@ const CashierPage = () => {
         <label htmlFor="uangDiterima" className="block text-sm font-medium text-gray-700 mb-1">
           Uang yang diterima (Tunai)
         </label>
-        {/* Input uang diterima */}
-        <input id="uangDiterima" type="text" value={uangDiterima} // value adalah string terformat
+        <input id="uangDiterima" type="text" value={uangDiterima} 
           onChange={handleUangDiterimaChange} onFocus={(e) => e.target.select()} placeholder="0"
           className={`w-full p-3 border rounded-lg text-xl text-right text-gray-700 focus:ring-sky-500 focus:border-sky-500 ${
-            paymentInputError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300' // Styling error
+            paymentInputError ? 'border-red-500 ring-1 ring-red-500' : 'border-gray-300' 
           }`}
           inputMode="numeric"
           disabled={processingCheckout}
@@ -429,7 +388,6 @@ const CashierPage = () => {
           <div className="grid grid-cols-2 gap-3">
             {quickPayOptions.map(amount => (
               <button key={amount} onClick={() => {
-                // Set nilai input dengan string terformat dari nilai numerik
                 setUangDiterima(Number(amount).toLocaleString('id-ID').replace(/,/g, '.'));
                 if (paymentInputError) setPaymentInputError(false);
               }}
@@ -441,9 +399,8 @@ const CashierPage = () => {
           </div>
         </div>
       </div>
-      {/* Tombol Terima Pembayaran */}
       <div className="mt-auto border-t pt-6">
-        <button onClick={handlePaymentSubmit} disabled={processingCheckout || !uangDiterima || Number(uangDiterima.replace(/\./g, "") || 0) < calculateTotal} // Tambah disable jika uang kurang
+        <button onClick={handlePaymentSubmit} disabled={processingCheckout || !uangDiterima || Number(uangDiterima.replace(/\./g, "") || 0) < calculateTotal} 
           className="w-full bg-red-600 hover:bg-red-700 text-white p-3 rounded-md font-semibold transition-colors disabled:bg-gray-400 disabled:text-gray-600">
           {processingCheckout ? "Memproses..." : "Terima Pembayaran"}
         </button>
@@ -451,7 +408,6 @@ const CashierPage = () => {
     </>
   );
 
-  // Tampilan Sukses
   const renderSuccessView = () => (
     <div className="flex flex-col items-center justify-center h-full text-center">
       <CheckCircle size={60} className="text-green-500 mb-4" />
@@ -461,12 +417,11 @@ const CashierPage = () => {
         {lastTransactionDetails?.tanggalClient ? new Date(lastTransactionDetails.tanggalClient).toLocaleString("id-ID", { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : "Baru saja"}
       </p>
       <div className="w-full bg-gray-50 p-4 rounded-lg shadow mb-6 text-left space-y-1">
-        {/* Pastikan nilai yang ditampilkan adalah Number */}
         <div className="flex justify-between"><span className="text-gray-600">Total Tagihan:</span><span className="font-medium text-gray-800">{formatCurrency(lastTransactionDetails?.totalHarga || 0)}</span></div>
         <div className="flex justify-between"><span className="text-gray-600">Uang Diterima:</span><span className="font-medium text-gray-800">{formatCurrency(lastTransactionDetails?.uangDiterima || 0)}</span></div>
         <div className="flex justify-between"><span className="text-red-600 font-semibold">Kembalian:</span><span className="font-semibold text-red-500">{formatCurrency(lastTransactionDetails?.kembalian || 0)}</span></div>
       </div>
-      <button onClick={() => { setRightPanelView(RightPanelView.CART); setLastTransactionDetails(null); fetchProducts(); }} // Refresh produk setelah transaksi baru
+      <button onClick={() => { setRightPanelView(RightPanelView.CART); setLastTransactionDetails(null); fetchProducts(); }} 
         className="w-full bg-green-600 hover:bg-green-700 text-white p-3 rounded-md font-semibold transition-colors">
         Transaksi Baru
       </button>
@@ -479,11 +434,9 @@ const CashierPage = () => {
         <Sidebar className="w-64 flex-shrink-0" />
         <main className="flex-1 p-6 md:p-8 flex gap-6 overflow-hidden">
 
-          {/* Panel Kiri: Daftar Produk */}
           <div className="flex flex-col w-full md:w-[60%] lg:w-[65%] bg-white rounded-xl shadow-lg p-6 overflow-hidden">
             <h1 className="text-2xl font-bold mb-1 text-gray-800">Pilih Produk</h1>
             <p className="text-sm text-gray-500 mb-4">Klik produk untuk menambahkannya ke keranjang.</p>
-            {/* Search Bar */}
             <div className="relative mb-4">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search size={18} className="text-gray-400" />
@@ -492,7 +445,6 @@ const CashierPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full p-2 pl-10 border border-gray-300 rounded-md text-gray-700 focus:ring-sky-500 focus:border-sky-500"/>
             </div>
-            {/* Daftar Produk (Scrollable) */}
             <div className="flex-grow overflow-y-auto pr-2 -mr-2">
               {loadingProducts ? (
                 <p className="text-center py-10 text-gray-600">Memuat produk...</p>
@@ -501,16 +453,13 @@ const CashierPage = () => {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
                   {filteredProducts.map((product) => (
-                    // Item Produk
                     <div key={product.id}
                       className={`p-4 border rounded-lg shadow-sm hover:shadow-md transition-shadow cursor-pointer ${Number(product.stok || 0) <= 0 ? "bg-gray-100 opacity-60 cursor-not-allowed" : "bg-white hover:border-sky-500"}`}
-                      onClick={() => Number(product.stok || 0) > 0 && !processingCheckout && handleAddToCart(product)}> {/* Hanya bisa diklik jika stok > 0 */}
+                      onClick={() => Number(product.stok || 0) > 0 && !processingCheckout && handleAddToCart(product)}> 
                       <h3 className="font-semibold text-md text-gray-800">{product.nama}</h3>
-                      {/* Tampilkan harga jual */}
                       <p className="text-sm text-gray-600">{formatCurrency(product.harga_jual || 0)}</p>
-                       {/* Tampilkan stok dengan warna berbeda */}
                       <p className={`text-xs mt-1 font-medium ${Number(product.stok || 0) > Number(product.minimum_stok || 0) ? 'text-green-600' : Number(product.stok || 0) > 0 ? 'text-orange-600' : 'text-red-600'}`}>
-                        Stok: {product.stok || 0} {product.minimum_stok !== undefined && `(Min: ${product.minimum_stok || 0})`} {/* Tampilkan min stok jika ada */}
+                        Stok: {product.stok || 0} {product.minimum_stok !== undefined && `(Min: ${product.minimum_stok || 0})`} 
                       </p>
                     </div>
                   ))}
@@ -519,9 +468,7 @@ const CashierPage = () => {
             </div>
           </div>
 
-          {/* Panel Kanan: Keranjang / Pembayaran / Sukses */}
-          {/* Pastikan flex-grow ada di sini jika ingin konten panel kanan memenuhi sisa tinggi */}
-          <div className="flex flex-col w-full md:w-[40%] lg:w-[35%] bg-white rounded-xl shadow-lg p-6 overflow-hidden"> {/* Tambahkan overflow-hidden */}
+          <div className="flex flex-col w-full md:w-[40%] lg:w-[35%] bg-white rounded-xl shadow-lg p-6 overflow-hidden"> 
             {rightPanelView === RightPanelView.CART && renderCartView()}
             {rightPanelView === RightPanelView.PAYMENT && renderPaymentView()}
             {rightPanelView === RightPanelView.SUCCESS && renderSuccessView()}
