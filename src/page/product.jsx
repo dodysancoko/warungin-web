@@ -1,28 +1,26 @@
-// src/page/product.jsx
 import React, { useState, useEffect, useCallback, useRef } from "react";
-// useNavigate dan useLocation tidak lagi terlalu penting untuk navigasi form, tapi bisa tetap ada jika ada state refresh
 import { useNavigate, useLocation } from "react-router-dom"; 
-import { productService } from "../service/productService"; // Pastikan path ini benar
+import { productService } from "../service/productService";
 import toast from "react-hot-toast";
-import { FiSearch, FiArchive, FiMoreVertical, FiPlus, FiEdit, FiTrash2, FiX } from "react-icons/fi"; // Tambah FiX untuk tombol close modal
-import Sidebar from "../components/ui/sidebar"; // Pastikan path ini benar
+import { FiSearch, FiArchive, FiMoreVertical, FiPlus, FiEdit, FiTrash2, FiX } from "react-icons/fi";
+import Sidebar from "../components/ui/sidebar";
 
 const ProductPage = () => {
-  const navigate = useNavigate(); // Masih bisa digunakan untuk refresh
-  const location = useLocation(); // Masih bisa digunakan untuk refresh
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [produkList, setProdukList] = useState([]);
   const [filteredProdukList, setFilteredProdukList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const [isLoading, setIsLoading] = useState(true); // Untuk loading daftar produk
+  const [isLoading, setIsLoading] = useState(true);
   const [activeOptionsMenu, setActiveOptionsMenu] = useState(null);
   const [showDeleteConfirmForProduct, setShowDeleteConfirmForProduct] = useState(null);
   const optionsMenuRef = useRef(null);
 
   // --- STATE UNTUK MODAL TAMBAH/EDIT PRODUK ---
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [modalMode, setModalMode] = useState("add"); // 'add' atau 'edit'
-  const [currentEditingProduct, setCurrentEditingProduct] = useState(null); // Untuk data produk yang diedit
+  const [modalMode, setModalMode] = useState("add");
+  const [currentEditingProduct, setCurrentEditingProduct] = useState(null);
   const [formData, setFormData] = useState({
     kode: "",
     nama: "",
@@ -31,7 +29,7 @@ const ProductPage = () => {
     stok: "",
     minimum_stok: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false); // Untuk loading saat submit form
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   // --- AKHIR STATE MODAL ---
 
@@ -40,10 +38,9 @@ const ProductPage = () => {
     setIsLoading(true);
     try {
       const products = await productService.getAllProducts();
-      // Urutkan produk di sini
       products.sort((a,b) => a.nama?.localeCompare(b.nama || '') || 0);
       setProdukList(products);
-      setFilteredProdukList(products); // Filtered list juga diupdate
+      setFilteredProdukList(products);
     } catch (error) {
       toast.error("Gagal memuat produk: " + error.message);
       setProdukList([]);
@@ -56,11 +53,10 @@ const ProductPage = () => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Untuk refresh jika ada state dari navigasi (misalnya setelah edit/tambah)
   useEffect(() => {
     if (location.state?.refresh) {
       fetchProducts();
-      navigate(location.pathname, { replace: true, state: {} }); // Hapus state refresh
+      navigate(location.pathname, { replace: true, state: {} });
     }
   }, [location.state, fetchProducts, navigate, location.pathname]);
 
@@ -104,7 +100,7 @@ const ProductPage = () => {
   const openModal = (mode = "add", product = null) => {
     setModalMode(mode);
     setIsModalOpen(true);
-    resetFormData(); // Selalu reset form saat membuka modal
+    resetFormData();
     if (mode === "edit" && product) {
       setCurrentEditingProduct(product);
       setFormData({
@@ -176,8 +172,8 @@ const ProductPage = () => {
         await productService.addProduct(productData);
         toast.success("Produk berhasil ditambahkan!");
       }
-      fetchProducts(); // Refresh daftar produk
-      closeModal();     // Tutup modal
+      fetchProducts();
+      closeModal();    
     } catch (error) {
       toast.error("Gagal menyimpan produk: " + error.message);
     } finally {
@@ -188,8 +184,7 @@ const ProductPage = () => {
 
   const handleDeleteProduct = async (productId) => {
     if (!productId) return;
-    // isLoading untuk delete bisa dipisah atau gunakan isSubmitting jika prosesnya cepat
-    setIsSubmitting(true); // Atau state loading khusus delete
+    setIsSubmitting(true);
     try {
       await productService.deleteProduct(productId);
       toast.success("Produk berhasil dihapus!");
@@ -306,7 +301,7 @@ const ProductPage = () => {
                         aria-labelledby="options-menu"
                       >
                         <button
-                          onClick={() => handleEditAction(produk)} // Diubah ke handleEditAction
+                          onClick={() => handleEditAction(produk)}
                           className="flex items-center w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 hover:text-gray-900 rounded-t-md"
                           role="menuitem"
                         >
@@ -393,7 +388,7 @@ const ProductPage = () => {
                             className="px-4 py-2 text-sm font-poppins font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md mr-3">
                         Batal
                     </button>
-                    <button type="button" onClick={handleFormSubmit} disabled={isSubmitting} // type="button" agar tidak submit form secara otomatis, submit dikontrol onClick
+                    <button type="button" onClick={handleFormSubmit} disabled={isSubmitting}
                             className="bg-sky-500 hover:bg-sky-600 text-white font-poppins font-semibold py-2 px-4 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-opacity-50 disabled:opacity-50">
                         {isSubmitting ? "Menyimpan..." : "Simpan"}
                     </button>
@@ -422,7 +417,7 @@ const ProductPage = () => {
                 <button
                   onClick={() => handleDeleteProduct(showDeleteConfirmForProduct.id)}
                   className="px-4 py-2 text-sm font-poppins font-medium text-white bg-red-500 hover:bg-red-600 rounded-md"
-                  disabled={isSubmitting} // Ganti isLoading menjadi isSubmitting atau state loading delete khusus
+                  disabled={isSubmitting}
                 >
                   {isSubmitting ? "Menghapus..." : "Hapus"}
                 </button>
@@ -432,7 +427,7 @@ const ProductPage = () => {
         )}
 
         <button
-          onClick={() => openModal("add")} // Buka modal untuk tambah produk
+          onClick={() => openModal("add")}
           className="fixed bottom-6 right-6 bg-sky-500 hover:bg-sky-600 text-white p-4 rounded-full shadow-lg z-30"
           aria-label="Tambah Produk"
         >
