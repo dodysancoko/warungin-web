@@ -1,4 +1,3 @@
-// src/components/SummaryCard.jsx
 import React from 'react';
 
 const SummaryCard = ({ title, value, isIncome }) => {
@@ -10,14 +9,14 @@ const SummaryCard = ({ title, value, isIncome }) => {
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'flex-start',
-    flex: 1, // Allow it to grow in the row
-    margin: '0 4px', // Add some space between cards
+    flex: 1,
+    margin: '0 4px',
   };
 
   const valueStyle = {
     fontSize: '18px',
     fontWeight: 'bold',
-    color: isIncome ? 'green' : 'red', // Basic color
+    color: isIncome ? 'green' : 'red',
     marginTop: '4px',
   };
 
