@@ -1,17 +1,14 @@
 // src/page/AddTransactionPage.jsx
 import React, { useState } from 'react';
-// Import icon jika pakai
-import { ArrowUp, ArrowDown, Save, X } from 'lucide-react'; // Atau import dari react-icons/fi jika konsisten
+import { ArrowUp, ArrowDown, Save, X } from 'lucide-react';
+import { Transaction, TransactionType } from '../types/transactionTypes';
+import { TransactionService } from '../service/transactionService';
 
-import { Transaction, TransactionType } from '../types/transactionTypes'; // SESUAIKAN PATH
-import { TransactionService } from '../service/transactionService'; // SESUAIKAN PATH
-
-// Menggunakan objek style inline untuk kemudahan
 const styles = {
    container: {
        display: 'flex',
        flexDirection: 'column',
-       padding: '20px', // Padding di dalam kotak modal
+       padding: '20px',
    },
   modalHeader: {
       display: 'flex',
@@ -37,7 +34,7 @@ const styles = {
   form: {
    display: 'flex',
    flexDirection: 'column',
-   gap: '16px', // Jarak antar elemen form
+   gap: '16px',
   },
    segmentedButtonStyle: {
      display: 'flex',
@@ -52,10 +49,10 @@ const styles = {
      cursor: 'pointer',
      fontWeight: '500',
      backgroundColor: isSelected
-       ? (type === TransactionType.income ? '#e8f5e9' : '#ffebee') // Light green/red
+       ? (type === TransactionType.income ? '#e8f5e9' : '#ffebee')
        : 'white',
      color: isSelected
-       ? (type === TransactionType.income ? '#2e7d32' : '#c62828') // Dark green/red
+       ? (type === TransactionType.income ? '#2e7d32' : '#c62828')
        : '#555',
      border: 'none',
      outline: 'none',
@@ -67,7 +64,6 @@ const styles = {
    iconStyle: {
      fontSize: '18px',
    },
-   // Gaya Input dan Label
    inputStyle: {
       padding: '10px 12px',
       border: '1px solid #ccc',
@@ -75,9 +71,7 @@ const styles = {
       fontSize: '16px',
       width: '100%',
       boxSizing: 'border-box',
-      // --- TAMBAHKAN BARIS INI ---
-      color: '#333', // Mengatur warna teks menjadi abu-abu gelap
-      // Anda juga bisa gunakan 'black' atau '#000' jika suka warna hitam pekat
+      color: '#333',
    },
    labelStyle: {
       display: 'block',
@@ -194,7 +188,7 @@ function AddTransactionPage({ onSave, onCancel }) {
                <input
                   id="amount"
                   type="text"
-                  style={styles.inputStyle} // Menggunakan style yang sudah diperbaiki
+                  style={styles.inputStyle}
                   placeholder="Contoh: 50000"
                   value={amount}
                   onChange={handleAmountChange}
@@ -208,7 +202,7 @@ function AddTransactionPage({ onSave, onCancel }) {
                <label htmlFor="description" style={styles.labelStyle}>Deskripsi</label>
                <textarea
                   id="description"
-                  style={styles.inputStyle} // Menggunakan style yang sama untuk textarea
+                  style={styles.inputStyle}
                   placeholder={selectedType === TransactionType.income ? "Contoh: Penjualan Harian" : "Contoh: Beli Stok ATK"}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}

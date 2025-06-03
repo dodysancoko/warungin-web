@@ -2,64 +2,48 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-// Import komponen-komponen yang dibutuhkan
-import Sidebar from '../components/ui/sidebar'; // SESUAIKAN PATH INI
-import SummaryCard from '../components/SummaryCard'; // SESUAIKAN PATH
-import TransactionCard from '../components/TransactionCard'; // SESUAIKAN PATH
-import GrafikOmsetPage from './GrafikOmsetPage'; // Pastikan GrafikOmsetPage ada di folder page
-import AddTransactionPage from './AddTransactionPage'; // Pastikan AddTransactionPage ada di folder page
+import Sidebar from '../components/ui/sidebar';
+import SummaryCard from '../components/SummaryCard';
+import TransactionCard from '../components/TransactionCard';
+import GrafikOmsetPage from './GrafikOmsetPage';
+import AddTransactionPage from './AddTransactionPage';
 
-// Import service dan types
-import { TransactionService } from '../service/transactionService'; // SESUAIKAN PATH
-import { TransactionType } from '../types/transactionTypes'; // SESUAIKAN PATH
+import { TransactionService } from '../service/transactionService';
+import { TransactionType } from '../types/transactionTypes';
 
-// Import pustaka formatting tanggal dan mata uang
-// import { Intl } from 'intl';
-
-// Menggunakan Tailwind classes untuk layout utama dan beberapa elemen
-// Sisa styling inline untuk elemen spesifik LaporanPage atau modal
 const pageStyles = {
-   // --- Gaya Baru untuk Modal Pop-up ---
    modalOverlay: {
-       position: 'fixed', // Tetap di viewport
+       position: 'fixed',
        top: 0,
        left: 0,
        right: 0,
        bottom: 0,
-       backgroundColor: 'rgba(0, 0, 0, 0.6)', // Latar belakang gelap transparan (bg-black opacity-60)
+       backgroundColor: 'rgba(0, 0, 0, 0.6)',
        display: 'flex',
-       justifyContent: 'center', // Pusatkan horizontal
-       alignItems: 'center', // Pusatkan vertikal
-       zIndex: 1000, // Pastikan di atas semua elemen lain (sidebar, konten, FAB)
-       padding: '20px', // Padding agar modal tidak terlalu mepet ke tepi di layar kecil
+       justifyContent: 'center',
+       alignItems: 'center',
+       zIndex: 1000,
+       padding: '20px',
    },
    modalContent: {
-       backgroundColor: 'white', // bg-white
-       borderRadius: '8px', // rounded-lg
-       boxShadow: '0 5px 15px rgba(0,0,0,0.3)', // custom shadow
-       // --- UBAH LEBAR MENJADI PERSENTASE DI SINI ---
-       width: '70%',      // Ambil 70% dari lebar parent (overlay = viewport)
-       maxWidth: '600px', // Batasi lebar maksimum di layar sangat lebar (opsional, sesuaikan)
-       // Anda bisa juga mencoba: width: '65%', maxWidth: '75%'
-       // Atau jika ingin murni proporsional tanpa batas atas (hati-hati di layar besar):
-       // width: '70%',
-       // maxWidth: 'none', // atau hilangkan baris maxWidth sepenuhnya
-
-       maxHeight: '90vh', // Tinggi maksimum agar bisa scroll jika form panjang
-       overflowY: 'auto', // Aktifkan scroll di dalam modal
-       // Konten internal modal (AddTransactionPage) akan menyesuaikan ukuran ini
+       backgroundColor: 'white',
+       borderRadius: '8px',
+       boxShadow: '0 5px 15px rgba(0,0,0,0.3)',
+       width: '70%',
+       maxWidth: '600px',
+       maxHeight: '90vh',
+       overflowY: 'auto',
    },
 
-   // --- Gaya Lain di pageStyles Tetap Sama ---
     mainLayoutContainer: {
         display: 'flex',
         height: '100vh',
         overflow: 'hidden',
-        backgroundColor: '#f3f4f6', // bg-gray-100 equivalent
+        backgroundColor: '#f3f4f6',
     },
     contentAreaWrapper: {
         flexGrow: 1,
-        overflowY: 'auto', // Scrolling di area ini
+        overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
     },
@@ -70,7 +54,7 @@ const pageStyles = {
     header: {
       height: '139px',
       width: '100%',
-      backgroundColor: '#64b5f6', // bg-sky-400 equivalent
+      backgroundColor: '#64b5f6',
       borderRadius: '0 0 20px 20px',
       boxShadow: '0 2px 5px rgba(0,0,0,0.26)',
       padding: '40px 16px 16px',
@@ -94,26 +78,26 @@ const pageStyles = {
        alignItems: 'center',
     },
      summaryCardsArea: {
-        padding: '0 20px', // px-5
-        marginTop: '-40px', // -mt-10
-        zIndex: 10, // z-10
-        flexShrink: 0, // flex-shrink-0
+        padding: '0 20px',
+        marginTop: '-40px',
+        zIndex: 10,
+        flexShrink: 0,
     },
     contentArea: {
        flexGrow: 1,
-       backgroundColor: 'white', // bg-white
-       marginTop: '20px', // mt-5
-       padding: '20px', // p-5
-       boxShadow: '0 5px 15px rgba(0,0,0,0.1)', // shadow-lg equivalent
-       borderRadius: '12px 12px 0 0', // rounded-t-xl equivalent
-       overflowY: 'hidden', // Jangan scroll di sini
+       backgroundColor: 'white',
+       marginTop: '20px',
+       padding: '20px',
+       boxShadow: '0 5px 15px rgba(0,0,0,0.1)',
+       borderRadius: '12px 12px 0 0',
+       overflowY: 'hidden',
     },
      transactionDateHeader: {
        marginTop: '16px',
        marginBottom: '8px',
-       color: 'rgba(0,0,0,0.6)', // text-gray-600
+       color: 'rgba(0,0,0,0.6)',
        fontSize: '14px',
-       fontWeight: '600', // font-semibold
+       fontWeight: '600',
     },
     noTransactionsMessage: {
        padding: '40px 0',
@@ -125,10 +109,10 @@ const pageStyles = {
        position: 'fixed',
        bottom: '24px',
        right: '24px',
-       backgroundColor: '#0EA5E9', // bg-sky-500
+       backgroundColor: '#0EA5E9',
        color: 'white',
-       borderRadius: '9999px', // rounded-full
-       width: '56px', // p-4 ~ 16*2 + 24 = 56
+       borderRadius: '9999px',
+       width: '56px',
        height: '56px',
        border: 'none',
        cursor: 'pointer',
@@ -136,8 +120,8 @@ const pageStyles = {
        display: 'flex',
        alignItems: 'center',
        justifyContent: 'center',
-       boxShadow: '0 4px 6px rgba(0,0,0,0.1)', // shadow-lg
-       zIndex: 30, // z-30
+       boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+       zIndex: 30,
     },
 
 };
@@ -150,9 +134,8 @@ function LaporanPage() {
   const [isExpanded, setIsExpanded] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [showAddModal, setShowAddModal] = useState(false); // State untuk modal
+  const [showAddModal, setShowAddModal] = useState(false);
 
-  // --- Derived State (Memoization) --- (Kode sama seperti sebelumnya)
    const groupedTransactions = useMemo(() => {
      if (!allTransactions) return {};
      const grouped = {};
@@ -212,7 +195,6 @@ function LaporanPage() {
    const currencyFormat = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
 
-  // --- Effects --- (Kode sama seperti sebelumnya)
    useEffect(() => {
      const fetchData = async () => {
        try {
@@ -238,7 +220,6 @@ function LaporanPage() {
      fetchData();
    }, []);
 
-  // --- Handlers --- (Kode sama seperti sebelumnya)
    const handleSetView = (isChart) => {
      if (isChartViewActive !== isChart) {
        setIsChartViewActive(isChart);
@@ -281,7 +262,6 @@ function LaporanPage() {
     };
 
 
-  // --- Render Logic for the Transaction List Content --- (Kode sama seperti sebelumnya)
     const buildListViewContent = () => {
        const sortedDates = Object.keys(groupedTransactions);
 
@@ -318,9 +298,7 @@ function LaporanPage() {
     };
 
 
-  // --- Main Render Function ---
   return (
-    // Wrapper utama flex: Sidebar + Konten Laporan
     <div className="flex h-screen overflow-hidden bg-gray-100">
         {/* Komponen Sidebar Anda */}
         <Sidebar />
@@ -412,7 +390,6 @@ function LaporanPage() {
 
       {/* Render Modal AddTransactionPage secara kondisional */}
       {showAddModal && (
-          // Wrapper Overlay dan Kontainer Modal
           <div style={pageStyles.modalOverlay} onClick={handleCancelAdd}> {/* Klik overlay untuk tutup */}
               <div style={pageStyles.modalContent} onClick={(e) => e.stopPropagation()}> {/* Stop propagation */}
                    {/* Komponen AddTransactionPage (sekarang isinya saja) */}
@@ -423,7 +400,7 @@ function LaporanPage() {
               </div>
           </div>
       )}
-    </div> // Akhir main layout container
+    </div>
   );
 }
 

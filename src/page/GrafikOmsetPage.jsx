@@ -1,8 +1,7 @@
 // src/screens/GrafikOmsetPage.jsx
 import React from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import SummaryCard from '../components/SummaryCard'; // Sesuaikan path
-// import { Intl } from 'intl'; // Built-in browser Intl
+import SummaryCard from '../components/SummaryCard';
 
 const GrafikOmsetPage = ({
   totalIncomeForMonth,
@@ -17,21 +16,19 @@ const GrafikOmsetPage = ({
     maximumFractionDigits: 0,
   });
 
-  // Data format for Recharts: Array of objects { name: 'Label', value: 123 }
   const chartData = monthlyIncomeSpots.map((spot, index) => ({
     name: monthLabels[index],
-    value: spot.y, // Recharts uses 'value' by default for simple data
-    x: spot.x, // Keep original x for potential advanced usage
+    value: spot.y,
+    x: spot.x,
   }));
 
-  // Y-axis formatter
   const formatYAxis = (value) => {
       if (value >= 1000000) {
           return `${(value / 1000000).toFixed(value % 1000000 === 0 ? 0 : 1)}Jt`;
       } else if (value >= 1000) {
           return `${(value / 1000).toFixed(value % 1000 === 0 ? 0 : 1)}rb`;
       }
-      return value.toLocaleString('id-ID'); // Use locale for thousands separator
+      return value.toLocaleString('id-ID');
   };
 
 
@@ -39,7 +36,7 @@ const GrafikOmsetPage = ({
     <div style={{ padding: '16px' }}> {/* Use div with padding */}
       {/* Summary Card for the selected month's income */}
       <SummaryCard
-        title="Pemasukkan" // Or the actual month name if needed
+        title="Pemasukkan"
         value={currencyFormat.format(totalIncomeForMonth)}
         isIncome={true}
       />
@@ -50,7 +47,7 @@ const GrafikOmsetPage = ({
         backgroundColor: 'white',
         borderRadius: '8px',
         boxShadow: '0 1px 3px rgba(0,0,0,0.15)',
-        padding: '16px', // Adjusted padding
+        padding: '16px',
       }}>
          {/* Use ResponsiveContainer to make chart responsive */}
          <ResponsiveContainer width="100%" height={300}>
@@ -67,9 +64,9 @@ const GrafikOmsetPage = ({
               <Line
                 type="monotone"
                 dataKey="value"
-                stroke="#8884d8" // Example color, match PurpleAccent if possible
+                stroke="#8884d8"
                 strokeWidth={2.5}
-                dot={false} // Hide dots
+                dot={false}
               />
             </LineChart>
          </ResponsiveContainer>

@@ -1,4 +1,4 @@
-// src/types.js atau src/types.ts (jika pakai TypeScript)
+// src/types.js 
 
 export const TransactionType = {
   income: 'income',
@@ -16,10 +16,10 @@ export class TransactionItem {
 export class Transaction {
   constructor(id, type, amount, date, description, items = []) {
     this.id = id;
-    this.type = type; // Use TransactionType enum values
+    this.type = type;
     this.amount = amount;
-    this.date = date; // Date object
+    this.date = date;
     this.description = description;
-    this.items = items.map(item => new TransactionItem(item.name, item.quantity, item.price)); // Ensure items are TransactionItem instances
+    this.items = items.map(item => new TransactionItem(item.name, item.quantity, item.price));
   }
 }
